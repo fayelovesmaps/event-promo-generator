@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Promo Generator</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --border: #2a2f3a;
+    --text: #e7eaf0; --muted: #9aa3b2; --accent: #6ea8fe; --accent2: #4f7fe0;
+    --ok: #3fb950; --err: #f85149; --warn: #d29922; --chip: #232834;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 12px; padding: 16px 24px;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0;
+    background: var(--bg); z-index: 5;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .wrap { display: grid; grid-template-columns: 440px 1fr; gap: 0; min-height: calc(100vh - 58px); }
+  .left { border-right: 1px solid var(--border); padding: 20px; overflow-y: auto; }
+  .right { padding: 20px; overflow-y: auto; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 9px 10px; font-size: 13px; font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab {
+    flex: 1; text-align: center; padding: 12px; border: 1px solid var(--border);
+    background: var(--panel2); border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 600;
+  }
+  .tab.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .tab small { display: block; font-weight: 400; font-size: 11px; opacity: .8; margin-top: 2px; }
+  button.primary {
+    width: 100%; background: var(--accent2); color: #fff; border: none; border-radius: 8px;
+    padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 14px;
+  }
+  button.primary:hover { background: var(--accent); }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  .ghost { background: var(--chip); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; }
+  .ghost:hover { border-color: var(--accent); }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .step-label { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; font-weight: 600; }
+  .hidden { display: none !important; }
+  /* Speaker cards */
+  .speakers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .speaker-card {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; cursor: pointer; text-align: center; transition: all .15s;
+  }
+  .speaker-card:hover { border-color: var(--accent); }
+  .speaker-card.selected { border-color: var(--accent2); background: #1d2a4a; }
+  .speaker-card .name { font-weight: 600; font-size: 13px; }
+  .speaker-card .desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  /* Results */
+  .result-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .result-card img { width: 100%; display: block; }
+  .result-card video { width: 100%; display: block; }
+  .result-card .body { padding: 14px; }
+  .result-card .meta { font-size: 11px; color: var(--muted); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .b-ok { background: #16341d; color: var(--ok); }
+  .b-run { background: #1d3b5e; color: var(--accent); }
+  .b-err { background: #3d1b1b; color: var(--err); }
+  .spinner { width: 20px; height: 20px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .prompt-preview { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; max-height: 200px; overflow-y: auto; margin-top: 8px; }
+  .empty { color: var(--muted); text-align: center; padding: 60px 0; }
+  a.dl { font-size: 12px; color: var(--accent); text-decoration: none; }
+  /* Variant grid */
+  .variant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .variant-cell { position: relative; cursor: pointer; overflow: hidden; border: 2px solid transparent; transition: border-color .15s, opacity .15s; }
+  .variant-cell img { width: 100%; display: block; aspect-ratio: auto; }
+  .variant-cell:hover { border-color: var(--accent); }
+  .variant-cell.picked { border-color: var(--ok); }
+  .variant-cell .pick-badge {
+    position: absolute; top: 8px; right: 8px; background: var(--ok); color: #fff;
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .variant-cell.picked .pick-badge { opacity: 1; }
+  .variant-cell .variant-num {
+    position: absolute; bottom: 6px; left: 8px; background: rgba(0,0,0,.65); color: #fff;
+    font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  }
+  .variant-grid.has-pick .variant-cell:not(.picked) { opacity: .5; }
+  .variant-grid.has-pick .variant-cell:not(.picked):hover { opacity: .85; }
+  .refine-bar {
+    display: flex; gap: 8px; padding: 10px 14px; flex-wrap: wrap;
+    border-top: 1px solid var(--border); background: var(--panel2);
+  }
+  .refine-btn {
+    background: var(--chip); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all .15s;
+  }
+  .refine-btn:hover { border-color: var(--accent); color: var(--accent); }
+  /* Speaker reference card */
+  .speaker-ref-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .speaker-ref-card .ref-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  .speaker-ref-card .ref-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .speaker-ref-card .ref-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .speaker-ref-card .ref-body { position: relative; }
+  .speaker-ref-card .ref-body img { width: 100%; display: block; }
+  .speaker-ref-card .ref-loading {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 20px; color: var(--muted); font-size: 13px; gap: 12px;
+  }
+  .speaker-ref-card .ref-actions {
+    display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border);
+  }
+  .speaker-ref-card .ref-note {
+    padding: 0 14px 12px; font-size: 11px; color: var(--muted); line-height: 1.4;
+  }
+  /* Direction cards */
+  .direction-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .direction-card {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; cursor: pointer; transition: all .15s;
+  }
+  .direction-card:hover { border-color: var(--accent); }
+  .direction-card.selected { border-color: var(--accent2); background: #1d2a4a; }
+  .direction-card .dir-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--text); }
+  .direction-card .dir-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
+  .direction-card .dir-meta { font-size: 11px; line-height: 1.6; }
+  .direction-card .dir-palette { color: var(--accent); }
+  .direction-card .dir-mood { color: var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Event Promo Generator</h1>
+  <span class="sub">Create promotional images & videos for your events</span>
+</header>
+
+<div class="wrap">
+  <!-- ============ LEFT: Controls ============ -->
+  <div class="left">
+    <!-- API Keys -->
+    <div class="panel">
+      <h2>API Configuration</h2>
+      <label>DashScope API Key</label>
+      <input type="password" id="dashscopeKey" placeholder="sk-...">
+      <div class="hint">Used for image (Qwen Image 2.0 Pro), video (HappyHorse 1.1 T2V / R2V), and creative direction suggestions (Qwen Plus)</div>
+      <div class="row" style="margin-top:8px">
+        <div>
+          <label>Region</label>
+          <select id="region">
+            <option value="mainland">Mainland China</option>
+            <option value="intl">International (Singapore)</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint" id="keyHint"></div>
+    </div>
+
+    <!-- Mode selector -->
+    <div class="tabs">
+      <div class="tab active" data-mode="image">Image<small>Event poster / flyer</small></div>
+      <div class="tab" data-mode="video">Video<small>Promo video (T2V / R2V)</small></div>
+    </div>
+
+    <!-- ─── IMAGE MODE ─── -->
+    <div id="imageMode">
+      <div class="panel">
+        <div class="step-label">Step 1 — Describe Your Event</div>
+        <h2>Event Information</h2>
+        <label>Event Name</label>
+        <input type="text" id="imgEventName" placeholder="e.g. Summer Jazz Festival 2026">
+        <label>Date & Time</label>
+        <input type="text" id="imgDate" placeholder="e.g. July 15, 2026 · 7:00 PM">
+        <label>Venue & City</label>
+        <input type="text" id="imgVenue" placeholder="e.g. The Blue Note, New York City">
+        <label>Performers / Speakers (optional)</label>
+        <input type="text" id="imgPerformers" placeholder="e.g. Miles Ahead Quartet, DJ Luna">
+        <label>Tagline or Theme (optional)</label>
+        <input type="text" id="imgTagline" placeholder="e.g. One Night of Pure Groove">
+        <label>Ticket Info / CTA (optional)</label>
+        <input type="text" id="imgCTA" placeholder="e.g. Tickets from $45 at jazzfest.com">
+        <button class="primary" id="suggestBtn" onclick="suggestStyles()">Suggest Creative Directions</button>
+        <div class="hint" id="suggestHint"></div>
+      </div>
+
+      <div class="panel hidden" id="directionsPanel">
+        <div class="step-label">Step 2 — Choose a Direction</div>
+        <h2>Creative Directions</h2>
+        <div class="hint" style="margin-bottom:10px">Tailored to your event. Pick the one that fits best.</div>
+        <div class="direction-cards" id="directionCards"></div>
+      </div>
+
+      <div class="panel hidden" id="customizePanel">
+        <div class="step-label">Step 3 — Customize & Generate</div>
+        <label>Size / Orientation</label>
+        <select id="imgSize">
+          <option value="1024x1536">Portrait Poster (1024x1536)</option>
+          <option value="1024x1024">Square — Instagram Feed (1024x1024)</option>
+          <option value="1536x1024">Landscape — Banner (1536x1024)</option>
+        </select>
+        <label>Additional Style Notes (optional)</label>
+        <textarea id="imgStyle" rows="2" placeholder="e.g. Add a cross symbol, use warmer tones..."></textarea>
+        <h2 style="margin-top:16px">Prompt Preview</h2>
+        <button class="ghost" onclick="buildImagePrompt()" style="width:100%">Rebuild Prompt</button>
+        <div class="prompt-preview" id="imgPromptPreview">Your prompt will appear here after selecting a direction.</div>
+        <label>Edit Prompt (full control)</label>
+        <textarea id="imgPrompt" rows="6" placeholder="The complete prompt for Qwen Image 2.0 Pro..."></textarea>
+        <button class="primary" id="imgGenBtn" onclick="generateImage()">Generate Poster (4 variants)</button>
+        <div class="hint" id="imgHint"></div>
+      </div>
+    </div>
+
+    <!-- ─── VIDEO MODE ─── -->
+    <div id="videoMode" class="hidden">
+      <div class="panel">
+        <div class="step-label">Step 1 — Event Details</div>
+        <h2>Event Information</h2>
+        <label>Event Name</label>
+        <input type="text" id="vidEventName" placeholder="e.g. AI Innovation Summit 2026">
+        <label>Date & Time</label>
+        <input type="text" id="vidDate" placeholder="e.g. August 20, 2026 · 9:00 AM">
+        <label>Venue & City</label>
+        <input type="text" id="vidVenue" placeholder="e.g. Convention Center, San Francisco">
+        <label>Scene / Environment</label>
+        <textarea id="vidScene" rows="2" placeholder="e.g. Rooftop terrace at golden hour overlooking the city skyline, warm string lights in background, potted greenery"></textarea>
+        <label>Speaker Wardrobe / Outfit</label>
+        <textarea id="vidWardrobe" rows="2" placeholder="e.g. Smart casual: cream linen blazer over a white tee, minimal gold jewelry — or — black turtleneck and tailored trousers for a gallery feel"></textarea>
+        <label>Key Highlights / Selling Points</label>
+        <textarea id="vidHighlights" rows="2" placeholder="e.g. 50+ speakers, hands-on workshops, networking dinner"></textarea>
+        <label>Ticket / Registration Info (optional)</label>
+        <input type="text" id="vidCTA" placeholder="e.g. Register free at aisummit.com">
+      </div>
+
+      <div class="panel">
+        <div class="step-label">Step 2 — Speaker</div>
+        <h2>Select Speaker</h2>
+        <div class="tabs" style="margin-bottom: 6px;">
+          <div class="tab active" id="genderTabFemale" onclick="selectGender('female')">Female</div>
+          <div class="tab" id="genderTabMale" onclick="selectGender('male')">Male</div>
+        </div>
+        <div class="speakers" id="speakerGrid"></div>
+      </div>
+
+      <div class="panel">
+        <div class="step-label">Step 3 — Video Parameters</div>
+        <h2>Video Settings</h2>
+        <div class="row">
+          <div>
+            <label>Duration</label>
+            <select id="vidDuration">
+              <option value="5">5 seconds</option>
+              <option value="10">10 seconds</option>
+              <option value="15">15 seconds</option>
+            </select>
+          </div>
+          <div>
+            <label>Aspect Ratio</label>
+            <select id="vidRatio">
+              <option value="9:16">9:16 Vertical (Stories/Reels)</option>
+              <option value="16:9">16:9 Horizontal (Web)</option>
+              <option value="1:1">1:1 Square (Instagram Feed)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="step-label">Step 4 — Generate</div>
+        <h2>Prompt Preview</h2>
+        <button class="ghost" onclick="buildVideoPrompt()" style="width:100%">Build HappyHorse Prompt</button>
+        <div class="prompt-preview" id="vidPromptPreview">Click "Build HappyHorse Prompt" to craft from event details.</div>
+        <label>Edit Prompt (full control)</label>
+        <textarea id="vidPrompt" rows="6" placeholder="The HappyHorse T2V prompt..."></textarea>
+        <button class="primary" id="vidGenBtn" onclick="generateVideo()">Generate Video</button>
+        <div class="hint" id="vidHint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RIGHT: Results ============ -->
+  <div class="right">
+    <h2 style="margin:0 0 14px; font-size:15px; display:flex; align-items:center; justify-content:space-between;">Results <button class="ghost" onclick="clearResults()" style="font-size:11px; padding:4px 10px;">Clear All</button></h2>
+    <div id="speakerRefCard"></div>
+    <div id="results"></div>
+    <div class="empty" id="emptyMsg">No results yet. Fill in event details and generate.</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let mode = "image";
+let selectedSpeaker = "mia";
+let results = [];
+let speakerRefs = { mia: null, sofia: null, aria: null, noa: null, liam: null, diego: null, kenji: null, marcus: null };
+
+let selectedDirection = null;
+let suggestedDirections = [];
+
+const SPEAKERS = {
+  // Female speakers
+  mia: { gender: "female", desc: "A tall European female fashion model with long blonde hair and fair skin" },
+  sofia: { gender: "female", desc: "A Latina female fashion model with wavy dark-brown hair and tan skin" },
+  aria: { gender: "female", desc: "An East Asian female fashion model with long straight black hair" },
+  noa: { gender: "female", desc: "A Black female fashion model with short cropped hair and deep skin tone" },
+  // Male speakers
+  liam: { gender: "male", desc: "A tall European male fashion model with short tousled blonde hair and fair skin" },
+  diego: { gender: "male", desc: "A Latino male fashion model with wavy dark-brown hair, light beard stubble, and tan skin" },
+  kenji: { gender: "male", desc: "An East Asian male fashion model with short jet-black hair, clean-shaven, and warm light skin tone" },
+  marcus: { gender: "male", desc: "A Black male fashion model with short cropped hair, neat beard, and deep skin tone" }
+};
+
+// Short labels shown on the speaker card
+const SPEAKER_LABELS = {
+  mia: { name: "Mia", desc: "European, long blonde hair, fair skin" },
+  sofia: { name: "Sofia", desc: "Latina, wavy dark-brown hair, tan skin" },
+  aria: { name: "Aria", desc: "East Asian, long straight black hair" },
+  noa: { name: "Noa", desc: "Black, short cropped hair, deep skin tone" },
+  liam: { name: "Liam", desc: "European, short blonde hair, fair skin" },
+  diego: { name: "Diego", desc: "Latino, wavy dark-brown hair, light stubble" },
+  kenji: { name: "Kenji", desc: "East Asian, short black hair, warm light skin" },
+  marcus: { name: "Marcus", desc: "Black, short cropped hair, neat beard" }
+};
+
+let selectedGender = "female";
+
+const MOOD_STYLES = {
+  elegant: {
+    palette: "deep navy, burnished gold, cream, warm white",
+    style: "sophisticated minimalism with luxury typography",
+    lighting: "warm amber key light from upper left, soft gradient background fading from deep navy to charcoal",
+    composition: "Generous negative space with a single refined focal element — a thin gold divider separating title from details. Subtle radial glow behind the main title.",
+    texture: "Smooth matte finish with faint linen grain. Gold elements have a subtle foil-stamp sheen.",
+    fontMix: "elegant serif (like Didot or Playfair Display) for the main title, clean light-weight sans-serif (like Futura Light) for details",
+    negation: "Not a cheap flyer — feels like a luxury brand invitation or gallery opening announcement."
+  },
+  bold: {
+    palette: "electric red, hot pink, jet black, bright white",
+    style: "high-contrast dynamic layout with large bold type and angular graphic elements",
+    lighting: "dramatic colored spotlights from multiple angles, high contrast with deep shadows, neon edge glow on text",
+    composition: "Diagonal slashes and angular geometric shapes creating dynamic energy. Text breaks out of conventional alignment with intentional overlaps. Strong visual weight at center.",
+    texture: "Glossy, almost screen-printed feel. Subtle halftone dot pattern in background areas.",
+    fontMix: "ultra-bold condensed sans-serif (like Impact or Bebas Neue) for the main title, medium-weight geometric sans-serif for supporting text",
+    negation: "Not generic or corporate — feels like a concert promotion or streetwear brand drop."
+  },
+  playful: {
+    palette: "coral pink, turquoise, sunny yellow, soft lavender, cream white",
+    style: "rounded shapes, hand-drawn illustrative elements, friendly approachable typography",
+    lighting: "bright, even, cheerful lighting like a sunny afternoon. Warm golden hour glow with soft diffused shadows.",
+    composition: "Organic flowing layout with rounded corners and soft shapes. Decorative doodle-style illustrations (stars, swirls, leaves, or abstract squiggles) framing the text without overwhelming it. Visual breathing room between elements.",
+    texture: "Slightly textured paper background, like thick craft paper or watercolor stock. Hand-drawn line quality on decorative elements.",
+    fontMix: "a bubbly rounded display font or casual hand-script for the main title, clean friendly sans-serif (like Nunito or Poppins) for details",
+    negation: "Not childish or clip-art — polished and Instagram-worthy while staying warm and inviting."
+  },
+  corporate: {
+    palette: "deep navy blue, cool silver, clean white, subtle teal accent",
+    style: "clean geometric grid layout, professional sans-serif typography, structured and trustworthy",
+    lighting: "neutral balanced studio lighting with a smooth gradient backdrop transitioning from white to light grey-blue",
+    composition: "Structured grid with clear columns. Logo-friendly header zone. Information hierarchy reinforced by consistent spacing and alignment. Thin rule lines separating sections.",
+    texture: "Clean and crisp, almost printed-on-premium-card-stock feel. Very subtle paper grain for warmth.",
+    fontMix: "a medium-weight geometric sans-serif (like Helvetica Neue or Inter) for the main title, lighter weight of the same family for body text",
+    negation: "Not boring or templated — feels like a well-designed tech company event invitation, not a generic corporate memo."
+  },
+  vintage: {
+    palette: "burnt orange, antique cream, forest green, aged gold, warm brown",
+    style: "retro typography with Art Deco and mid-century influences, layered decorative borders",
+    lighting: "warm tungsten glow, film-grain softness, gentle vignette darkening edges",
+    composition: "Ornate but balanced layout with decorative border frames and Art Deco line patterns. Title set in an arched or curved arrangement. Symmetrical centered design with layered typographic hierarchy.",
+    texture: "Aged paper with visible grain and slight yellowing. Ink has a letterpress-printed quality with subtle impression depth. Film grain overlay.",
+    fontMix: "a bold Art Deco display typeface (like Broadway or Poiret One) for the main title, a classic serif (like Garamond) for supporting text",
+    negation: "Not kitschy or costume-party — feels like an authentic restored vintage poster or a premium whiskey label."
+  },
+  minimalist: {
+    palette: "off-black (#1a1a1a), warm white (#fafaf8), one carefully chosen accent color",
+    style: "generous white space, single focal element, refined elegant serif typography",
+    lighting: "soft even diffused light with clean minimal shadows, no dramatic effects",
+    composition: "Extreme economy of elements — only the essential text and one subtle graphic element (a single thin line, a small geometric shape, or a tasteful icon). Centered or left-aligned. At least 40% of the canvas is intentional empty space.",
+    texture: "Smooth premium matte paper finish. No grain, no noise — pure and clean.",
+    fontMix: "a refined thin serif (like Cormorant Garamond or EB Garamond) for the main title, a clean light sans-serif for secondary text",
+    negation: "Not empty or lazy — every element is deliberate. Feels like a high-end gallery invitation or Japanese design aesthetic."
+  }
+};
+
+const RATIO_SIZE_MAP = {
+  "9:16": "720*1280",
+  "16:9": "1280*720",
+  "1:1": "720*720"
+};
+
+// ═══════════════════════════════════════
+// MODE SWITCHING
+// ═══════════════════════════════════════
+document.querySelectorAll(".tab[data-mode]").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab[data-mode]").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  mode = t.dataset.mode;
+  document.getElementById("imageMode").classList.toggle("hidden", mode !== "image");
+  document.getElementById("videoMode").classList.toggle("hidden", mode !== "video");
+  // Show/hide speaker reference card based on mode
+  if (mode === "video" && speakerRefs[selectedSpeaker]) {
+    renderSpeakerRef(selectedSpeaker);
+  } else {
+    const refCard = document.getElementById("speakerRefCard");
+    if (refCard) refCard.innerHTML = "";
+  }
+}));
+
+function selectSpeaker(idOrEl) {
+  // Accept either a speaker id (string) or a card element (for backward compat)
+  const id = typeof idOrEl === "string" ? idOrEl : idOrEl.dataset.id;
+  selectedSpeaker = id;
+  document.querySelectorAll(".speaker-card").forEach(c => {
+    c.classList.toggle("selected", c.dataset.id === id);
+  });
+  // Trigger reference photo generation (on-demand, cached if already generated)
+  generateSpeakerRef(selectedSpeaker);
+}
+
+function renderSpeakerCards() {
+  const grid = document.getElementById("speakerGrid");
+  if (!grid) return;
+  const ids = Object.keys(SPEAKERS).filter(k => SPEAKERS[k].gender === selectedGender);
+  grid.innerHTML = ids.map(id => {
+    const lbl = SPEAKER_LABELS[id];
+    const sel = id === selectedSpeaker ? " selected" : "";
+    return `<div class="speaker-card${sel}" data-id="${id}" onclick="selectSpeaker('${id}')">
+      <div class="name">${lbl.name}</div>
+      <div class="desc">${lbl.desc}</div>
+    </div>`;
+  }).join("");
+}
+
+function selectGender(gender) {
+  if (gender !== "female" && gender !== "male") return;
+  selectedGender = gender;
+  document.getElementById("genderTabFemale").classList.toggle("active", gender === "female");
+  document.getElementById("genderTabMale").classList.toggle("active", gender === "male");
+  // Reset to first speaker of that gender
+  const firstId = gender === "female" ? "mia" : "liam";
+  if (SPEAKERS[selectedSpeaker]?.gender !== gender) {
+    selectedSpeaker = firstId;
+  }
+  renderSpeakerCards();
+  generateSpeakerRef(selectedSpeaker);
+}
+
+// ═══════════════════════════════════════
+// SPEAKER REFERENCE PHOTO
+// ═══════════════════════════════════════
+function buildSpeakerRefPrompt(speakerId) {
+  const desc = SPEAKERS[speakerId].desc;
+  const wardrobeEl = document.getElementById("vidWardrobe");
+  const wardrobe = (wardrobeEl ? wardrobeEl.value.trim() : "") || "neat well-fitted modern attire, clean lines, professional but approachable";
+  return `Professional headshot portrait photograph of ${desc.toLowerCase()}, wearing ${wardrobe}, warm studio lighting from front-left, shallow depth of field, neutral grey background, looking directly at camera with a calm confident smile, chest-up framing, high-end fashion editorial quality, 4K, photorealistic.`;
+}
+
+async function generateSpeakerRef(speakerId, forceRefresh = false) {
+  // If already cached and not forcing refresh, just render
+  if (speakerRefs[speakerId]?.url && !forceRefresh) {
+    renderSpeakerRef(speakerId);
+    return;
+  }
+  // If a fetch is already in flight for this speaker, just re-render and wait
+  if (speakerRefs[speakerId]?.generating && !forceRefresh) {
+    renderSpeakerRef(speakerId);
+    return;
+  }
+
+  const apiKey = document.getElementById("dashscopeKey").value.trim();
+  const region = document.getElementById("region").value;
+
+  if (!apiKey) {
+    // Can't generate without API key — show message in ref card
+    speakerRefs[speakerId] = { url: null, generating: false, error: "Enter API key to generate reference photo" };
+    renderSpeakerRef(speakerId);
+    return;
+  }
+
+  // Mark as generating and show loading state
+  speakerRefs[speakerId] = { url: null, generating: true };
+  renderSpeakerRef(speakerId);
+
+  try {
+    const prompt = buildSpeakerRefPrompt(speakerId);
+    const resp = await fetch("/api/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, size: "768*1024", n: 1, apiKey, region })
+    });
+    const data = await resp.json();
+
+    if (data.images && data.images.length) {
+      speakerRefs[speakerId] = { url: data.images[0].remoteUrl, generating: false };
+    } else {
+      speakerRefs[speakerId] = { url: null, generating: false, error: data.error || "Failed to generate" };
+    }
+  } catch (e) {
+    speakerRefs[speakerId] = { url: null, generating: false, error: e.message };
+  }
+
+  renderSpeakerRef(speakerId);
+}
+
+function renderSpeakerRef(speakerId) {
+  const container = document.getElementById("speakerRefCard");
+  if (!container) return;
+
+  // Ignore stale async renders: if user has switched speakers while a fetch
+  // was in flight, don't overwrite the currently-selected speaker's card.
+  if (speakerId !== selectedSpeaker) return;
+
+  const ref = speakerRefs[speakerId];
+  const name = speakerId.charAt(0).toUpperCase() + speakerId.slice(1);
+
+  // Only show when in video mode
+  if (mode !== "video") {
+    container.innerHTML = "";
+    return;
+  }
+
+  if (!ref) {
+    container.innerHTML = "";
+    return;
+  }
+
+  let bodyContent = "";
+  if (ref.generating) {
+    bodyContent = `<div class="ref-loading">
+      <span class="spinner"></span>
+      Generating reference photo for ${name}...
+    </div>`;
+  } else if (ref.url) {
+    bodyContent = `<div class="ref-body"><img src="${ref.url}" alt="Reference photo for ${name}"></div>`;
+  } else if (ref.error) {
+    bodyContent = `<div class="ref-loading" style="padding:30px 20px;color:var(--err)">${escHtml(ref.error)}</div>`;
+  }
+
+  const actions = ref.url ? `<div class="ref-actions">
+    <button class="ghost" onclick="generateSpeakerRef('${speakerId}', true)">Refresh Photo</button>
+    <a class="dl" href="${ref.url}" target="_blank" download style="line-height:32px">Download</a>
+  </div>` : (ref.error && !ref.generating ? `<div class="ref-actions">
+    <button class="ghost" onclick="generateSpeakerRef('${speakerId}', true)">Retry</button>
+  </div>` : '');
+
+  container.innerHTML = `<div class="speaker-ref-card">
+    <div class="ref-header">
+      <div>
+        <div class="ref-title">Speaker Reference — ${name}</div>
+        <div class="ref-subtitle">${SPEAKER_LABELS[speakerId].desc}</div>
+      </div>
+    </div>
+    ${bodyContent}
+    ${actions}
+    ${ref.url ? '<div class="ref-note">This reference ensures your video speaker matches this appearance.</div>' : ''}
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// SUGGEST CREATIVE DIRECTIONS (calls Qwen LLM)
+// ═══════════════════════════════════════
+async function suggestStyles() {
+  const name = document.getElementById("imgEventName").value.trim();
+  const apiKey = document.getElementById("dashscopeKey").value.trim();
+  const region = document.getElementById("region").value;
+
+  if (!name) { document.getElementById("suggestHint").textContent = "Please enter at least an event name."; return; }
+  if (!apiKey) { document.getElementById("suggestHint").textContent = "Enter your DashScope API key above."; return; }
+  document.getElementById("suggestHint").textContent = "";
+
+  const btn = document.getElementById("suggestBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating directions...';
+
+  let usedFallback = false;
+  let fallbackReason = "";
+
+  try {
+    const resp = await fetch("/api/suggest-styles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventName: name,
+        date: document.getElementById("imgDate").value.trim(),
+        venue: document.getElementById("imgVenue").value.trim(),
+        performers: document.getElementById("imgPerformers").value.trim(),
+        tagline: document.getElementById("imgTagline").value.trim(),
+        cta: document.getElementById("imgCTA").value.trim(),
+        apiKey, region
+      })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      fallbackReason = data.error || `HTTP ${resp.status}`;
+      usedFallback = true;
+    } else if (data.directions && data.directions.length) {
+      suggestedDirections = data.directions;
+    } else {
+      fallbackReason = "No directions returned from API";
+      usedFallback = true;
+    }
+  } catch (e) {
+    fallbackReason = e.message;
+    usedFallback = true;
+  }
+
+  // Fall back to MOOD_STYLES presets if the LLM call failed
+  if (usedFallback) {
+    suggestedDirections = pickFallbackDirections();
+  }
+
+  selectedDirection = null;
+  renderDirectionCards();
+  document.getElementById("directionsPanel").classList.remove("hidden");
+  document.getElementById("customizePanel").classList.add("hidden");
+  document.getElementById("directionsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+
+  document.getElementById("suggestHint").textContent = usedFallback
+    ? `LLM suggester unavailable (${fallbackReason}). Showing 3 curated presets instead.`
+    : "";
+
+  btn.disabled = false;
+  btn.textContent = "Suggest Creative Directions";
+}
+
+// Pick 3 random mood-style presets and normalize them into the
+// direction-card shape (name, description, palette, mood, composition, ...).
+function pickFallbackDirections() {
+  const keys = Object.keys(MOOD_STYLES);
+  const picks = [];
+  const used = new Set();
+  while (picks.length < 3 && picks.length < keys.length) {
+    const k = keys[Math.floor(Math.random() * keys.length)];
+    if (used.has(k)) continue;
+    used.add(k);
+    const m = MOOD_STYLES[k];
+    picks.push({
+      name: k.charAt(0).toUpperCase() + k.slice(1),
+      description: m.style,
+      palette: m.palette,
+      mood: k,
+      composition: m.composition,
+      lighting: m.lighting,
+      texture: m.texture,
+      negation: m.negation
+    });
+  }
+  return picks;
+}
+
+function renderDirectionCards() {
+  const container = document.getElementById("directionCards");
+  container.innerHTML = suggestedDirections.map((d, i) => `
+    <div class="direction-card${selectedDirection === i ? ' selected' : ''}" onclick="selectDirection(${i})">
+      <div class="dir-name">${escHtml(d.name)}</div>
+      <div class="dir-desc">${escHtml(d.description)}</div>
+      <div class="dir-meta">
+        <div class="dir-palette">Palette: ${escHtml(d.palette)}</div>
+        <div class="dir-mood">Mood: ${escHtml(d.mood)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function selectDirection(idx) {
+  selectedDirection = idx;
+  renderDirectionCards();
+  // Show step 3 and auto-build the prompt
+  document.getElementById("customizePanel").classList.remove("hidden");
+  buildImagePrompt();
+  document.getElementById("customizePanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ═══════════════════════════════════════
+// IMAGE PROMPT BUILDER
+// Uses the AI-suggested direction + event details to craft a rich prompt
+// ═══════════════════════════════════════
+function buildImagePrompt() {
+  const name = document.getElementById("imgEventName").value.trim();
+  const date = document.getElementById("imgDate").value.trim();
+  const venue = document.getElementById("imgVenue").value.trim();
+  const performers = document.getElementById("imgPerformers").value.trim();
+  const tagline = document.getElementById("imgTagline").value.trim();
+  const cta = document.getElementById("imgCTA").value.trim();
+  const size = document.getElementById("imgSize").value;
+  const styleNotes = document.getElementById("imgStyle").value.trim();
+
+  if (selectedDirection === null || !suggestedDirections[selectedDirection]) {
+    document.getElementById("imgHint").textContent = "Please select a creative direction first.";
+    return;
+  }
+  document.getElementById("imgHint").textContent = "";
+
+  const dir = suggestedDirections[selectedDirection];
+  const orientation = size === "1024x1536" ? "vertical portrait"
+                    : size === "1024x1024" ? "square 1:1"
+                    : "horizontal landscape";
+  const aspectNote = size === "1024x1536" ? "taller than wide, strong vertical flow"
+                   : size === "1024x1024" ? "equal width and height, centered composition"
+                   : "wider than tall, horizontal banner flow";
+
+  // ── Section 1: Subject Anchor (front-loaded) ──
+  let prompt = `A professionally designed promotional event poster — editorial advertising layout, graphic design composition, intended for print and social media. `;
+  prompt += `${orientation} format (${aspectNote}).\n\n`;
+
+  // ── Section 2: Typography & Text Content (front-loaded, immediately after subject) ──
+  prompt += `Typography and text content — render these EXACT words clearly and legibly on the poster, every letter spelled correctly:\n`;
+  prompt += `- Main title "${name}" — large bold display type, centered in the upper third of the poster, high contrast against background.\n`;
+  if (tagline) prompt += `- Tagline "${tagline}" — smaller light or italic weight, directly beneath the title.\n`;
+  if (performers) {
+    const names = performers.split(/,\s*/).filter(Boolean);
+    prompt += `- Featured names — each on its own line, stacked, all clearly legible: ` + names.map(n => `"${n}"`).join(', ') + `.\n`;
+  }
+  if (date) prompt += `- Date "${date}" — medium weight, centered in the lower band beneath the title block.\n`;
+  if (venue) prompt += `- Venue "${venue}" — small caps or light weight, directly beneath the date.\n`;
+  if (cta) prompt += `- Call to action "${cta}" — rendered as a rounded pill button shape in the lower-right area, high-contrast fill, button-style.\n`;
+  prompt += `Use a high-contrast modern sans-serif typeface for headings (weight 700-900, tight tracking) and a clean readable typeface for supporting text. Every letter must be sharp, crisp, and perfectly readable — no garbled, distorted, or fake characters.\n\n`;
+
+  // ── Section 3: Composition ──
+  prompt += `Composition: ${dir.composition || "Clean hierarchical layout with clear visual flow."}`;
+  if (styleNotes) prompt += ` Additional user direction: ${styleNotes}.`;
+  prompt += `\n\n`;
+
+  // ── Section 4: Environment & Lighting ──
+  prompt += `Environment and lighting: ${dir.lighting || "Warm balanced lighting."}.\n\n`;
+
+  // ── Section 5: Palette ──
+  prompt += `Color palette: ${dir.palette}.\n`;
+
+  // ── Section 6: Texture & Material ──
+  prompt += `Material and texture: ${dir.texture || "High-quality finish."}\n`;
+
+  // ── Section 7: Mood ──
+  prompt += `\nOverall mood: ${dir.mood}, polished, high-production-value, premium and intentional.`;
+
+  // ── Build separate negative prompt ──
+  // Extract unwanted nouns from "Not ..." negation strings instead of putting them in positive prompt
+  let negativeNouns = "";
+  if (dir.negation) {
+    // Strip leading "Not " and trailing context phrases — keep the descriptive nouns
+    negativeNouns = dir.negation
+      .replace(/^Not\s+/i, "")
+      .replace(/[—–-].*$/, "")  // strip explanatory clauses after em/en/hyphen-dash
+      .replace(/\s+or\s+/gi, ", ")
+      .trim()
+      .replace(/[.,;:]+$/, "");
+  }
+  const negativePrompt = [
+    negativeNouns,
+    "garbled text, distorted typography, misspelled words, fake letters, illegible text",
+    "watermark, signature, logo overlay, clip-art, kitschy, childish, templated, cheap flyer",
+    "blurry, low resolution, jpeg artifacts, smudged, pixelated, extra limbs, deformed"
+  ].filter(Boolean).join(", ");
+
+  document.getElementById("imgPrompt").value = prompt;
+  document.getElementById("imgPromptPreview").textContent = prompt + "\n\n— Negative prompt —\n" + negativePrompt;
+  // Stash the negative prompt for generateImage / refineVariant to pick up
+  window.__imgNegativePrompt = negativePrompt;
+}
+
+// ═══════════════════════════════════════
+// VIDEO PROMPT BUILDER
+// (Following HappyHorse prompt tuner principles)
+// ═══════════════════════════════════════
+function buildVideoPrompt() {
+  const name = document.getElementById("vidEventName").value.trim();
+  const date = document.getElementById("vidDate").value.trim();
+  const venue = document.getElementById("vidVenue").value.trim();
+  const scene = document.getElementById("vidScene").value.trim();
+  const wardrobe = document.getElementById("vidWardrobe").value.trim();
+  const highlights = document.getElementById("vidHighlights").value.trim();
+  const cta = document.getElementById("vidCTA").value.trim();
+  const duration = parseInt(document.getElementById("vidDuration").value);
+  const ratio = document.getElementById("vidRatio").value;
+
+  if (!name) {
+    document.getElementById("vidHint").textContent = "Please enter at least an event name.";
+    return;
+  }
+  document.getElementById("vidHint").textContent = "";
+
+  const speakerDesc = SPEAKERS[selectedSpeaker].desc;
+  const hasRef = !!speakerRefs[selectedSpeaker]?.url;
+
+  // Build script based on duration (following event-promo-video word counts)
+  let script = "";
+  if (duration === 5) {
+    // ~12 words, one key sentence
+    script = `Join us for ${name}${date ? ', ' + date : ''}.`;
+  } else if (duration === 10) {
+    // ~25 words
+    script = `Hey! ${name} is coming${date ? ' on ' + date : ''}${venue ? ' at ' + venue : ''}. ${highlights ? highlights.split(',')[0].trim() + '.' : ''} Don't miss it!`;
+  } else {
+    // ~38 words for 15s
+    script = `I'm so excited to announce ${name}${date ? ', happening ' + date : ''}${venue ? ' at ' + venue : ''}. ${highlights ? 'Featuring ' + highlights + '.' : ''} ${cta || 'Save your spot now!'}`;
+  }
+
+  // Determine framing based on aspect ratio
+  let framing = "chest-up, centered, speaker facing directly toward camera";
+  if (ratio === "9:16") framing += ", vertical composition with space above and below the speaker";
+  else if (ratio === "1:1") framing += ", tight square framing";
+
+  // Wardrobe fallback if user didn't fill it in
+  const wardrobeFinal = wardrobe || "neat, well-fitted modern attire appropriate for the event mood — clean lines, professional but approachable";
+
+  // ── Anchor [Image 1] reference at the TOP (R2V identity preservation) ──
+  let prompt = "";
+  if (hasRef) {
+    prompt += `[Image 1] is the speaker in this video — same face, hairstyle, skin tone, and overall look as [Image 1]. `;
+    prompt += `${speakerDesc}. Wearing ${wardrobeFinal}. `;
+  } else {
+    prompt += `${speakerDesc}, wearing ${wardrobeFinal}. `;
+  }
+  prompt += `${framing}.\n\n`;
+
+  // ── Setting ──
+  prompt += `Setting: ${scene || 'modern professional studio environment with soft warm lighting, shallow depth of field blurring the background'}. `;
+  prompt += `${scene ? 'Cinematic depth of field with background slightly blurred to keep focus on the speaker. ' : ''}Warm key light from front-left casting gentle shadows, subtle rim light from behind separating the speaker from the background.\n\n`;
+
+  // ── Camera ──
+  prompt += `Camera: fixed position with very slow subtle push-in, eye-level angle, stable smooth movement.\n\n`;
+
+  // ── Performance / action ──
+  prompt += `Performance: calm, confident warmth, speaking directly to camera at a natural pace. `;
+  prompt += `Slight head tilts, natural blinks, small hand gestures for emphasis, breathing visible. `;
+  prompt += `Lip-sync the line precisely: "${script}" — clear pronunciation, mouth shapes matching every syllable.\n\n`;
+
+  // ── Ending ──
+  prompt += `Final half-second: holds a gentle closed-mouth smile with no movement, creating a smooth ending.\n\n`;
+
+  // ── Audio direction ──
+  prompt += `Audio: warm conversational voice, clear pronunciation, mid-pitch, professional but inviting tone, soft ambient room tone underneath, no background music.\n\n`;
+
+  // ── Constraints ──
+  prompt += `Constraints: no on-screen text, no captions, no subtitles, no watermarks, no graphic overlays — clean cinematic footage only.`;
+
+  document.getElementById("vidPrompt").value = prompt;
+  document.getElementById("vidPromptPreview").textContent = prompt;
+}
+
+// ═══════════════════════════════════════
+// GENERATE IMAGE
+// ═══════════════════════════════════════
+async function generateImage() {
+  const prompt = document.getElementById("imgPrompt").value.trim();
+  const apiKey = document.getElementById("dashscopeKey").value.trim();
+  const size = document.getElementById("imgSize").value;
+  const region = document.getElementById("region").value;
+
+  if (!prompt) { document.getElementById("imgHint").textContent = "Build or write a prompt first."; return; }
+  if (!apiKey) { document.getElementById("imgHint").textContent = "Enter your DashScope API key above."; return; }
+  document.getElementById("imgHint").textContent = "";
+
+  const btn = document.getElementById("imgGenBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating 4 variants...';
+
+  const card = addResult({ type: "image", status: "generating", prompt: prompt.slice(0, 100) + "...", pickedIndex: null });
+
+  try {
+    const resp = await fetch("/api/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, negativePrompt: window.__imgNegativePrompt || "", size, n: 4, apiKey, region })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      card.status = "error";
+      card.error = data.error || "Unknown error";
+    } else {
+      card.status = "done";
+      card.images = data.images || [];
+    }
+  } catch (e) {
+    card.status = "error";
+    card.error = e.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Generate Poster (4 variants)";
+  renderResults();
+}
+
+// ═══════════════════════════════════════
+// GENERATE VIDEO
+// ═══════════════════════════════════════
+async function generateVideo() {
+  const prompt = document.getElementById("vidPrompt").value.trim();
+  const apiKey = document.getElementById("dashscopeKey").value.trim();
+  const duration = parseInt(document.getElementById("vidDuration").value);
+  const ratio = document.getElementById("vidRatio").value;
+  const region = document.getElementById("region").value;
+
+  if (!prompt) { document.getElementById("vidHint").textContent = "Build or write a prompt first."; return; }
+  if (!apiKey) { document.getElementById("vidHint").textContent = "Enter your DashScope API key above."; return; }
+  document.getElementById("vidHint").textContent = "";
+
+  // Hide the speaker reference card — it's been sent to the API
+  document.getElementById("speakerRefCard").innerHTML = "";
+
+  const btn = document.getElementById("vidGenBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const card = addResult({ type: "video", status: "submitting", prompt: prompt.slice(0, 100) + "..." });
+
+  try {
+    // Include speaker reference image if available (enables R2V for character identity preservation)
+    const referenceImage = speakerRefs[selectedSpeaker]?.url || null;
+    const resp = await fetch("/api/generate-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, duration, resolution: "720P", ratio, region, apiKey, referenceImage })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      card.status = "error";
+      card.error = data.error || "Unknown error";
+      renderResults();
+    } else {
+      card.taskId = data.taskId;
+      card.status = "PENDING";
+      card.region = region;
+      card.apiKey = apiKey;
+      renderResults();
+      pollVideo(card);
+    }
+  } catch (e) {
+    card.status = "error";
+    card.error = e.message;
+    renderResults();
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Generate Video";
+}
+
+// ═══════════════════════════════════════
+// POLL VIDEO STATUS
+// ═══════════════════════════════════════
+async function pollVideo(card) {
+  const POLL_INTERVAL = 8000;
+  const MAX_POLLS = 120; // ~16 min max
+  let polls = 0;
+
+  while (polls < MAX_POLLS) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL));
+    polls++;
+
+    try {
+      const resp = await fetch("/api/poll-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: card.taskId, region: card.region, apiKey: card.apiKey })
+      });
+      const data = await resp.json();
+
+      if (data.status === "SUCCEEDED") {
+        card.status = "done";
+        card.videoUrl = data.videoUrl;
+        renderResults();
+        return;
+      } else if (data.status === "FAILED" || data.status === "CANCELED") {
+        card.status = "error";
+        card.error = data.message || `Task ${data.status}`;
+        renderResults();
+        return;
+      } else {
+        card.status = data.status || "RUNNING";
+        card.elapsed = polls * (POLL_INTERVAL / 1000);
+        renderResults();
+      }
+    } catch (e) {
+      // Transient error, keep polling
+    }
+  }
+
+  card.status = "timeout";
+  card.error = "Timed out after 16 minutes. Task may still be running.";
+  renderResults();
+}
+
+// ═══════════════════════════════════════
+// RESULTS RENDERING
+// ═══════════════════════════════════════
+function addResult(item) {
+  item.id = Date.now();
+  item.createdAt = new Date().toLocaleTimeString();
+  results.unshift(item);
+  renderResults();
+  return item;
+}
+
+function clearResults() {
+  results = [];
+  renderResults();
+}
+
+function renderResults() {
+  const container = document.getElementById("results");
+  const empty = document.getElementById("emptyMsg");
+  empty.style.display = results.length ? "none" : "block";
+
+  container.innerHTML = results.map(r => {
+    let media = "";
+    let badge = "";
+    let extra = "";
+    let refineBar = "";
+
+    if (r.status === "done" && r.type === "image" && r.images && r.images.length) {
+      badge = `<span class="badge b-ok">${r.images.length} variant${r.images.length > 1 ? 's' : ''}</span>`;
+
+      if (r.images.length > 1) {
+        // --- 2×2 Variant Grid ---
+        const hasPick = r.pickedIndex !== null && r.pickedIndex !== undefined;
+        media = `<div class="variant-grid ${hasPick ? 'has-pick' : ''}" data-result-id="${r.id}">` +
+          r.images.map((img, i) => {
+            const src = img.localUrl || img.remoteUrl;
+            const picked = (r.pickedIndex === i) ? 'picked' : '';
+            return `<div class="variant-cell ${picked}" onclick="pickVariant(${r.id}, ${i})">
+              <img src="${src}" alt="Variant ${i + 1}">
+              <span class="variant-num">${i + 1}</span>
+              <span class="pick-badge">Winner</span>
+            </div>`;
+          }).join("") + `</div>`;
+
+        if (hasPick) {
+          const winnerSrc = r.images[r.pickedIndex].localUrl || r.images[r.pickedIndex].remoteUrl;
+          media += `<div style="margin-top:10px"><img src="${winnerSrc}" alt="Winner" style="width:100%;border-radius:8px"></div>`;
+          extra = `<a class="dl" href="${winnerSrc}" target="_blank" download>Download winner</a>`;
+          refineBar = `<div class="refine-bar">
+            <button class="refine-btn" onclick="refineVariant(${r.id}, 'regenerate')">Regenerate (4 new)</button>
+            <button class="refine-btn" onclick="refineVariant(${r.id}, 'vary-palette')">Vary Palette</button>
+            <button class="refine-btn" onclick="refineVariant(${r.id}, 'vary-composition')">Vary Composition</button>
+          </div>`;
+        } else {
+          extra = `<span style="font-size:12px;color:var(--muted)">Click a variant to pick your winner</span>`;
+        }
+      } else {
+        // --- Single image fallback ---
+        const img = r.images[0];
+        const src = img.localUrl || img.remoteUrl;
+        media = `<img src="${src}" alt="Generated poster" style="width:100%;border-radius:8px">`;
+        extra = `<a class="dl" href="${src}" target="_blank" download>Download image</a>`;
+      }
+    } else if (r.status === "done" && r.type === "video" && r.videoUrl) {
+      media = `<video controls preload="metadata" src="${r.videoUrl}"></video>`;
+      extra = `<a class="dl" href="${r.videoUrl}" target="_blank">Open / download video</a>`;
+      badge = `<span class="badge b-ok">done</span>`;
+    } else if (r.status === "error") {
+      badge = `<span class="badge b-err">error</span>`;
+      extra = `<div style="color:var(--err);font-size:12px;margin-top:6px">${escHtml(r.error || "")}</div>`;
+    } else {
+      badge = `<span class="badge b-run"><span class="spinner" style="width:12px;height:12px;border-width:2px;margin-right:6px"></span>${r.status}${r.elapsed ? ' · ' + Math.round(r.elapsed) + 's' : ''}</span>`;
+    }
+
+    return `<div class="result-card">
+      ${media}
+      <div class="body">
+        <div>${badge} <span style="font-size:11px;color:var(--muted)">${r.type.toUpperCase()} · ${r.createdAt}</span></div>
+        <div class="meta" style="margin-top:6px">${escHtml(r.prompt)}</div>
+        ${r.taskId ? `<div class="meta">Task: <code>${r.taskId}</code></div>` : ''}
+        ${extra}
+      </div>
+      ${refineBar}
+    </div>`;
+  }).join("");
+}
+
+// ═══════════════════════════════════════
+// PICK WINNER & REFINE
+// ═══════════════════════════════════════
+function pickVariant(resultId, index) {
+  const r = results.find(x => x.id === resultId);
+  if (!r) return;
+  // Toggle: clicking the already-picked variant deselects it
+  r.pickedIndex = (r.pickedIndex === index) ? null : index;
+  renderResults();
+}
+
+async function refineVariant(resultId, action) {
+  const r = results.find(x => x.id === resultId);
+  if (!r || r.pickedIndex === null) return;
+
+  const apiKey = document.getElementById("dashscopeKey").value.trim();
+  const size = document.getElementById("imgSize").value;
+  const region = document.getElementById("region").value;
+  const basePrompt = document.getElementById("imgPrompt").value.trim();
+
+  if (!apiKey) { alert("Enter your DashScope API key first."); return; }
+
+  // Build a modified prompt based on the refinement action
+  let refinedPrompt = basePrompt;
+  if (action === "vary-palette") {
+    refinedPrompt += "\n\n[VARIATION INSTRUCTION: Keep the exact same composition, layout, typography, and content, but explore a COMPLETELY DIFFERENT color palette. New palette should contrast strongly with the previous version while maintaining the same mood and professionalism.]";
+  } else if (action === "vary-composition") {
+    refinedPrompt += "\n\n[VARIATION INSTRUCTION: Keep the exact same color palette, typography style, and content, but try a SIGNIFICANTLY DIFFERENT layout and composition. Move key elements to different positions, try a different visual hierarchy, or change the focal element arrangement.]";
+  }
+  // "regenerate" uses the same prompt as-is (new random seed)
+
+  // Disable all refine buttons on this card
+  const btns = document.querySelectorAll(`[onclick*="refineVariant(${resultId}"]`);
+  btns.forEach(b => { b.disabled = true; b.style.opacity = ".5"; });
+
+  const card = addResult({
+    type: "image",
+    status: "generating",
+    prompt: (action === "regenerate" ? basePrompt : `[${action}] ` + basePrompt).slice(0, 100) + "...",
+    pickedIndex: null,
+    refinedFrom: resultId
+  });
+
+  try {
+    const resp = await fetch("/api/generate-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: refinedPrompt, negativePrompt: window.__imgNegativePrompt || "", size, n: 4, apiKey, region })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      card.status = "error";
+      card.error = data.error || "Unknown error";
+    } else {
+      card.status = "done";
+      card.images = data.images || [];
+    }
+  } catch (e) {
+    card.status = "error";
+    card.error = e.message;
+  }
+
+  btns.forEach(b => { b.disabled = false; b.style.opacity = "1"; });
+  renderResults();
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+(async function init() {
+  renderSpeakerCards();
+  try {
+    const resp = await fetch("/api/defaults");
+    const data = await resp.json();
+    if (data.hasDashscopeKey) document.getElementById("keyHint").textContent = "DashScope key loaded from env";
+  } catch (e) {
+    document.getElementById("keyHint").textContent = "Server not reachable — is server.py running?";
+  }
+})();
+</script>
+</body>
+</html>
